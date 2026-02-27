@@ -1,0 +1,15 @@
+export const EVENT_HABITAT_OPTIONS = [
+  { value: 'forest', label: 'Forest' },
+  { value: 'arctic', label: 'Arctic' },
+  { value: 'desert', label: 'Desert' },
+  { value: 'jungle', label: 'Jungle' },
+  { value: 'volcanic', label: 'Volcanic' },
+  { value: 'roadside', label: 'Roadside' },
+  { value: 'cave', label: 'Cave' },
+  { value: 'mountain', label: 'Mountain' },
+  { value: 'swamp', label: 'Swamp' },
+  { value: 'urban', label: 'Urban' },
+  { value: 'plains', label: 'Plains' },
+  { value: 'coast', label: 'Coast' },
+];
+
