@@ -1,0 +1,21 @@
+export const npcCatalogue = [
+  {
+    name: 'Jhoira',
+    description: 'Wizard',
+    type: 'human',
+    size: 'medium',
+    cr: '',
+    xp: '',
+    initiative: 0,
+    habitats: [],
+    locations: null,
+    regions: [],
+    hp: 100,
+    mp: 40,
+    ac: 14,
+    rc: 15,
+    ab: 0,
+    fb: 5,
+    db: 0,
+  },
+];

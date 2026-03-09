@@ -34,6 +34,10 @@ class ShopGenerator {
     { value: 'master', label: 'Master' },
     { value: 'commander', label: 'Commander' },
   ];
+  static PARTY_LEVEL_OPTIONS = Array.from({ length: 20 }, (_, idx) => {
+    const level = idx + 1;
+    return { value: level, label: `Level ${level}` };
+  });
 
   static RARITY_COST_RANGES = {
     common: [8, 55],
@@ -45,15 +49,15 @@ class ShopGenerator {
   static RARITY_WEIGHTS = {
     common: 60,
     uncommon: 25,
-    rare: 12,
-    legendary: 3,
+    rare: 10,
+    legendary: 5,
   };
 
   static RARITY_WEIGHTS_BY_PARTY_MASTERY_LEVEL = {
     novice: { common: 70, uncommon: 20, rare: 10, legendary: 0 },
-    expert: { common: 60, uncommon: 25, rare: 15, legendary: 0 },
+    expert: { common: 60, uncommon: 25, rare: 10, legendary: 5 },
     master: { common: 50, uncommon: 25, rare: 15, legendary: 10 },
-    commander: { common: 40, uncommon: 25, rare: 20, legendary: 15 },
+    commander: { common: 45, uncommon: 25, rare: 20, legendary: 10 },
   };
 
   static QUANTITY_BY_RARITY = {
@@ -137,32 +141,7 @@ class ShopGenerator {
   }
 
   static computeEntryQuantity({ candidate, shopType, forcedQuantity }) {
-    const [minQty, maxQty] = this.QUANTITY_BY_RARITY[candidate.rarity] || [1, 4];
-    let quantity = Number.isFinite(forcedQuantity) ? forcedQuantity : this.randomInt(minQty, maxQty);
-    const rarity = String(candidate.rarity || '').toLowerCase();
-
-    if (rarity === 'rare' || rarity === 'legendary') {
-      quantity = 1;
-    }
-
-    if (shopType === 'relic store') {
-      quantity = Math.min(quantity, 1);
-    }
-    if (shopType === 'equipment store') {
-      quantity = Math.min(quantity, 1);
-    }
-    if (shopType === 'potion store' && !this.isPotionItem(candidate)) {
-      quantity = Math.min(quantity, 3);
-    }
-    if (shopType === 'general store') {
-      if (this.isHealthPotion(candidate)) {
-        quantity = Math.min(quantity, 10);
-      } else {
-        quantity = Math.min(quantity, 5);
-      }
-    }
-
-    return Math.max(1, quantity);
+    return 1;
   }
 
   static toDisplayItemName(itemName) {
@@ -172,7 +151,19 @@ class ShopGenerator {
     return itemName;
   }
 
-  static getAllCatalogItemsByLocation(location, shopType) {
+  static isPartyLevelEligible(entry, partyLevel) {
+    const requiredLevel = Number(entry?.partyLevel);
+    const selectedPartyLevel = Number(partyLevel);
+    if (!Number.isFinite(requiredLevel) || requiredLevel <= 0) {
+      return true;
+    }
+    if (!Number.isFinite(selectedPartyLevel) || selectedPartyLevel <= 0) {
+      return true;
+    }
+    return selectedPartyLevel >= requiredLevel;
+  }
+
+  static getAllCatalogItemsByLocation(location, shopType, partyLevel = null) {
     const allItems = Object.values(ITEM_CATALOG).flatMap((tier) => (
       ['normal', 'magic'].flatMap((type) => (
         (tier[type] || []).map((entry) => ({
@@ -182,8 +173,12 @@ class ShopGenerator {
       ))
     ));
 
-    const byLocation = !location ? allItems : allItems.filter((entry) => {
+    const byPartyLevel = allItems.filter((entry) => this.isPartyLevelEligible(entry, partyLevel));
+    const byLocation = !location ? byPartyLevel : byPartyLevel.filter((entry) => {
       const locations = entry.locations || (entry.location ? [entry.location] : []);
+      if (locations.length === 0) {
+        return true;
+      }
       return locations.includes(location);
     });
     const locationPool = byLocation.length > 0 ? byLocation : allItems;
@@ -196,14 +191,15 @@ class ShopGenerator {
     return byShopType.length > 0 ? byShopType : locationPool;
   }
 
-  static buildRandomInventory(location, shopType, partyMasteryLevel = '') {
-    const sourceRaw = this.getAllCatalogItemsByLocation(location, shopType);
+  static buildRandomInventory(location, shopType, partyMasteryLevel = '', partyLevel = null) {
+    const sourceRaw = this.getAllCatalogItemsByLocation(location, shopType, partyLevel);
     const source = shopType === 'relic store'
       ? sourceRaw
       : sourceRaw.filter((entry) => String(entry.rarity || '').toLowerCase() !== 'legendary');
     const maxDistinctBySource = new Set(source.map((entry) => entry.item)).size;
-    const maxInventory = shopType === 'relic store' ? 7 : 10;
-    const inventorySize = Math.min(this.randomInt(5, 10), maxInventory, maxDistinctBySource);
+    const maxInventory = shopType === 'relic store' ? 7 : (shopType === 'general store' ? 20 : 10);
+    const inventoryRoll = shopType === 'general store' ? this.randomInt(10, 20) : this.randomInt(5, 10);
+    const inventorySize = Math.min(inventoryRoll, maxInventory, maxDistinctBySource);
     const picked = [];
     const usedNames = new Set();
 
@@ -217,6 +213,8 @@ class ShopGenerator {
       picked.push({
         item: this.toDisplayItemName(candidate.item),
         details: candidate.details || 'No details provided.',
+        effects: candidate.effects || '',
+        damage: candidate.damage || '',
         type: candidate.type,
         rarity: candidate.rarity,
         size: candidate.size || 'unknown',
@@ -266,39 +264,13 @@ class ShopGenerator {
       addCandidate(candidate);
     }
 
-    if (shopType === 'potion store' || shopType === 'general store') {
-      const healing = picked.find((entry) => this.isBasicHealthPotion(entry));
-      const mana = picked.find((entry) => this.isBasicManaPotion(entry));
-      if (healing && mana && healing.quantity <= mana.quantity) {
-        healing.quantity = mana.quantity + 1;
-      }
-
-      const advancedHealthPotions = picked.filter((entry) => (
-        /potion of (greater|superior|supreme) healing/i.test(String(entry.item || ''))
-        || /^(greater|superior|supreme) health potion$/i.test(String(entry.item || '').trim())
-      ));
-      if (healing && advancedHealthPotions.length > 0) {
-        const maxAdvancedHealthQty = Math.max(...advancedHealthPotions.map((entry) => entry.quantity));
-        if (healing.quantity <= maxAdvancedHealthQty) {
-          healing.quantity = maxAdvancedHealthQty + 1;
-        }
-      }
-
-      const basicTotal = picked
-        .filter((entry) => this.isBasicPotion(entry))
-        .reduce((sum, entry) => sum + entry.quantity, 0);
-      const advancedTotal = picked
-        .filter((entry) => this.isGreaterOrSupremePotion(entry))
-        .reduce((sum, entry) => sum + entry.quantity, 0);
-      if (basicTotal <= advancedTotal && healing) {
-        healing.quantity += (advancedTotal - basicTotal) + 1;
-      }
-    }
+    // Global rule: every generated shop entry has max quantity of 1.
+    picked.forEach((entry) => { entry.quantity = 1; });
 
     return picked;
   }
 
-  static buildRandomShop(location, shopType, partyMasteryLevel = '') {
+  static buildRandomShop(location, shopType, partyMasteryLevel = '', partyLevel = null) {
     const shopNamesByLocation = {
       city: ['Market Ward Outfitters', 'Gilded Street Exchange', 'Candlekeep Provisions'],
       forest: ['Thornpath Trading Post', 'Whisperbark Supplies', 'Greenveil Outfitter'],
@@ -330,7 +302,8 @@ class ShopGenerator {
       location: chosenLocation,
       shopType: shopType || 'any',
       partyMasteryLevel: partyMasteryLevel || 'none (base rarity weights)',
-      inventory: this.buildRandomInventory(chosenLocation, shopType || '', partyMasteryLevel),
+      partyLevel: Number(partyLevel) || 1,
+      inventory: this.buildRandomInventory(chosenLocation, shopType || '', partyMasteryLevel, partyLevel),
     };
   }
 
@@ -339,6 +312,7 @@ class ShopGenerator {
     location,
     shopType,
     partyMasteryLevel = '',
+    partyLevel = null,
   }) {
     const chosenShop = selectedShop
       ? this.SHOPS_CATALOGUE.find((entry) => entry.shop === selectedShop)
@@ -351,12 +325,16 @@ class ShopGenerator {
           resolvedLocation === 'varied' ? '' : resolvedLocation,
           shopType,
           partyMasteryLevel,
+          partyLevel,
         )
         : (chosenShop.inventory || [])
+          .filter((entry) => this.isPartyLevelEligible(entry, partyLevel))
           .filter((entry) => String(entry.rarity || '').toLowerCase() !== 'legendary')
           .map((entry) => ({
             ...entry,
             item: this.toDisplayItemName(entry.item),
+            effects: entry.effects || '',
+            damage: entry.damage || '',
             size: entry.size || 'unknown',
           }));
       return {
@@ -365,11 +343,12 @@ class ShopGenerator {
         location: resolvedLocation,
         shopType: shopType || 'any',
         partyMasteryLevel: partyMasteryLevel || 'none (base rarity weights)',
+        partyLevel: Number(partyLevel) || 1,
         inventory: filteredInventory,
       };
     }
 
-    return this.buildRandomShop(location, shopType || '', partyMasteryLevel);
+    return this.buildRandomShop(location, shopType || '', partyMasteryLevel, partyLevel);
   }
 }
 

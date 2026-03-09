@@ -61,6 +61,8 @@ class EncounterTrackerGenerator {
           type: 'Monster',
           hp: stats.hp,
           mp: stats.mp,
+          maxHp: stats.hp,
+          maxMp: stats.mp,
           ac: stats.ac,
           rc: stats.rc,
           ab: stats.ab,
@@ -85,13 +87,16 @@ class EncounterTrackerGenerator {
     const partyEntries = party.map((member, idx) => {
       const initiativeBonus = this.parseInitiativeBonus(member.initiativeBonus);
       const initiativeRoll = this.rollInitiative(initiativeBonus);
+      const displayName = member.characterName || member.name;
       return {
         id: `party-${member.name}-${idx + 1}`,
         side: 'party',
-        name: member.name,
+        name: displayName,
         type: member.character,
         hp: member.hp,
         mp: member.mp,
+        maxHp: member.hp,
+        maxMp: member.mp,
         ac: member.ac,
         rc: member.rc,
         ab: member.ab,

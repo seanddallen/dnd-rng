@@ -1,27 +1,12 @@
 export const SHOPS_CATALOGUE = [
   {
-    shop: 'Iron Oak Outfitter',
-    shopDetails: 'A practical supplier for scouts, rangers, and caravan guards.',
-    owner: 'Mara Fenroot',
-    ownerDetails: 'A retired trail warden with a sharp eye for quality gear.',
-    locations: ['forest', 'roadside', 'wilderness'],
+    shop: 'Tolarian General',
+    storeType: "general store",
+    shopDetails: 'Tolarian general shop.',
+    owner: 'Curtis Fenroot',
+    ownerDetails: 'Older black human man. A retired military with a sharp eye for quality gear.',
+    locations: ['Tolaria'],
     inventory: [
-      {
-        item: 'Ranger Trail Kit',
-        details: 'Bedroll, rope, and a compact trap for wilderness travel.',
-        type: 'normal',
-        rarity: 'common',
-        quantity: 6,
-        cost: '4 GP',
-      },
-      {
-        item: 'Camouflage Travel Cloak',
-        details: 'A muted cloak favored by scouts and trappers.',
-        type: 'normal',
-        rarity: 'uncommon',
-        quantity: 3,
-        cost: '16 GP',
-      },
       {
         item: 'Potion of Healing',
         details: 'A small red vial that restores vitality.',
@@ -30,71 +15,110 @@ export const SHOPS_CATALOGUE = [
         quantity: 4,
         cost: '50 GP',
       },
-    ],
-  },
-  {
-    shop: 'Sable Lantern Curios',
-    shopDetails: 'A city-side curiosity shop dealing in uncommon relics and oddments.',
-    owner: 'Quillan Voss',
-    ownerDetails: 'A meticulous broker who tracks provenance for every piece.',
-    locations: ['city', 'ruins'],
-    inventory: [
       {
-        item: 'Master Appraiser Lens',
-        details: 'A precision magnifier used by city jewelers.',
-        type: 'normal',
-        rarity: 'uncommon',
-        quantity: 2,
-        cost: '40 GP',
-      },
-      {
-        item: 'Bag of Holding',
-        details: 'A small bag with much larger interior capacity.',
-        type: 'magic',
-        rarity: 'uncommon',
-        quantity: 1,
-        cost: '400 GP',
-      },
-      {
-        item: 'Spell Scroll (2nd Level)',
-        details: 'A single-use scroll containing a 2nd-level spell.',
-        type: 'magic',
-        rarity: 'common',
-        quantity: 5,
-        cost: '120 GP',
+        "item": "Antitoxin (vial)",
+        "effects": "cure poison from target or advantage on saving throws against poison for 1 hour.",
+        "cost": "50 GP",
+        "storeTypes": [
+          "potion store"
+        ],
+        "rarity": "common",
+        "size": "small",
+        "level": "novice",
+        "type": "normal"
       },
     ],
   },
   {
-    shop: 'Deepvault Exchange',
-    shopDetails: 'A fortified trading post serving delvers and dungeon salvage teams.',
-    owner: 'Borik Stonebrand',
-    ownerDetails: 'A gruff quartermaster who only stocks proven equipment.',
-    locations: ['dungeon', 'cave', 'roadside'],
+    shop: 'Eds Equipment',
+    storeType: "equipment store",
+    shopDetails: 'Tolarian equipment shop.',
+    owner: 'Ed Green',
+    ownerDetails: 'Middle age human man. Balding with beer belly. Speaks fast like an actioneer. Called Steady Ed',
+    locations: ['Tolaria'],
     inventory: [
       {
-        item: 'Portable Ram',
-        details: 'A reinforced ram used for forcing old doors.',
-        type: 'normal',
-        rarity: 'uncommon',
-        quantity: 4,
-        cost: '12 GP',
+        "item": "Dagger",
+        "details": "Standardized weapon profile (finesse, basic).",
+        "damage": "1d6 piercing (per ML for Might classes)",
+        "type": "normal",
+        "proficiency": "basic",
+        "size": "light",
+        "hold": "one-handed",
+        "rarity": "common",
+        "cost": "10 GP",
+        "storeTypes": [
+          "equipment store"
+        ],
+        "weaponType": "finesse",
+        "level": "novice",
+        "partyLevel": 1
+      },
+    ],
+  },
+  {
+    shop: 'Potions and Perfumes.',
+    storeType: "potion store",
+    shopDetails: 'Tolarian potion shop.',
+    owner: 'Claudia Clause',
+    ownerDetails: 'Older Tiefling woman. Red skin and bright purple hair. Bit of a flirt.',
+    locations: ['Tolaria'],
+    inventory: [
+      {
+        "item": "Health Potion",
+        "details": "Potion, varies You regain hit points when you drink this potion.",
+        "effects": "",
+        "cost": "50 GP",
+        "manaColors": [
+          ""
+        ],
+        "storeTypes": [
+          "general store",
+          "potion store"
+        ],
+        "rarity": "common",
+        "size": "tiny",
+        "level": "novice",
+        "type": "magic"
       },
       {
-        item: 'Stonebreaker Set',
-        details: 'High-grade picks and wedges for breaching ruins.',
-        type: 'normal',
-        rarity: 'common',
-        quantity: 5,
-        cost: '25 GP',
+        "item": "Antitoxin (vial)",
+        "effects": "cure poison from target or advantage on saving throws against poison for 1 hour.",
+        "cost": "50 GP",
+        "storeTypes": [
+          "potion store"
+        ],
+        "rarity": "common",
+        "size": "small",
+        "level": "novice",
+        "type": "normal"
       },
+    ],
+  },
+  {
+    shop: '',
+    storeType: "potion store",
+    shopDetails: 'Herb`s Herbs.',
+    owner: 'Herb Fenroot',
+    ownerDetails: 'Outdoor and Herb enthusiast',
+    locations: ['Baldurs Gate'],
+    inventory: [
       {
-        item: 'Potion of Climbing',
-        details: 'Grants confidence and precision when scaling walls.',
-        type: 'magic',
-        rarity: 'common',
-        quantity: 3,
-        cost: '65 GP',
+        "item": "Health Potion",
+        "details": "Potion, varies You regain hit points when you drink this potion.",
+        "effects": "",
+        "cost": "50 GP",
+        "manaColors": [
+          ""
+        ],
+        "storeTypes": [
+          "general store",
+          "potion store"
+        ],
+        "rarity": "common",
+        "size": "tiny",
+        "level": "novice",
+        "type": "magic"
       },
     ],
   },

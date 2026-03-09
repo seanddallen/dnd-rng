@@ -12,20 +12,11 @@ class ItemGenerator {
   };
 
   static RARITY_WEIGHTS = {
-    common: 55,
-    uncommon: 28,
-    rare: 13,
-    legendary: 4,
+    common: 60,
+    uncommon: 25,
+    rare: 10,
+    legendary: 5,
   };
-
-  static LOCATION_OPTIONS = [
-    { value: 'dungeon', label: 'Dungeon' },
-    { value: 'forest', label: 'Forest' },
-    { value: 'city', label: 'City' },
-    { value: 'roadside', label: 'Roadside' },
-    { value: 'ruins', label: 'Ruins' },
-    { value: 'wilderness', label: 'Wilderness' },
-  ];
 
   static LEVEL_GROUPS = {
     novice: { label: 'Novice' },
@@ -38,6 +29,10 @@ class ItemGenerator {
     { value: 'expert', label: 'Expert' },
     { value: 'master', label: 'Master' },
   ];
+  static PARTY_LEVEL_OPTIONS = Array.from({ length: 20 }, (_, idx) => {
+    const level = idx + 1;
+    return { value: level, label: `Level ${level}` };
+  });
 
   static ITEM_CATALOG = ITEM_CATALOG;
 
@@ -77,7 +72,19 @@ class ItemGenerator {
     return this.TIER_ORDER.slice(0, idx + 1);
   }
 
-  static generateItem({ levelTier, location, typeFilter, rarityFilter }) {
+  static isPartyLevelEligible(entry, partyLevel) {
+    const requiredLevel = Number(entry?.partyLevel);
+    const selectedPartyLevel = Number(partyLevel);
+    if (!Number.isFinite(requiredLevel) || requiredLevel <= 0) {
+      return true;
+    }
+    if (!Number.isFinite(selectedPartyLevel) || selectedPartyLevel <= 0) {
+      return true;
+    }
+    return selectedPartyLevel >= requiredLevel;
+  }
+
+  static generateItem({ levelTier, typeFilter, rarityFilter, partyLevel }) {
     const activeTierKeys = this.getTierKeysUpTo(levelTier);
     const activeCatalogs = activeTierKeys
       .map((tierKey) => this.ITEM_CATALOG[tierKey])
@@ -96,24 +103,18 @@ class ItemGenerator {
     const allowedTypes = typeFilter ? [typeFilter] : this.TYPE_ORDER;
     const allowedRarities = rarityFilter ? [rarityFilter] : this.RARITY_ORDER;
 
-    const hasLocation = (entry, targetLocation) => {
-      if (!targetLocation) {
-        return true;
-      }
-      const locations = entry.locations || (entry.location ? [entry.location] : []);
-      return locations.includes(targetLocation);
-    };
-
     const getPool = (type, rarity) => (
       activeCatalogs.flatMap((catalog) => catalog[type] || []).filter(
-        (entry) => hasLocation(entry, location) && entry.rarity === rarity,
+        (entry) => entry.rarity === rarity
+          && this.isPartyLevelEligible(entry, partyLevel),
       )
     );
 
-    const getAllLocationItems = () => (
+    const getAllItems = () => (
       allowedTypes.flatMap((type) =>
         activeCatalogs.flatMap((catalog) => catalog[type] || [])
-          .filter((entry) => hasLocation(entry, location) && allowedRarities.includes(entry.rarity))
+          .filter((entry) => allowedRarities.includes(entry.rarity))
+          .filter((entry) => this.isPartyLevelEligible(entry, partyLevel))
           .map((entry) => ({
             ...entry,
             type,
@@ -140,14 +141,14 @@ class ItemGenerator {
     }
 
     if (!selectedEntry) {
-      const allItems = getAllLocationItems();
+      const allItems = getAllItems();
       if (allItems.length === 0) {
         return {
           item: 'No result',
           type: 'N/A',
           rarity: 'N/A',
-          details: 'No items found for this location in the selected level group.',
-          note: 'Try a different location or level.',
+          details: 'No items found in the selected level group.',
+          note: 'Try a different tier or filter.',
         };
       }
 

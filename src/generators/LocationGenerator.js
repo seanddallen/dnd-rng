@@ -24,6 +24,16 @@ class LocationGenerator {
     { value: '', label: 'Any Habitat' },
     ...EVENT_HABITAT_OPTIONS,
   ];
+  static MASTERY_LEVEL_OPTIONS = [
+    { value: '', label: 'Any Mastery Level' },
+    { value: 'novice', label: 'Novice' },
+    { value: 'expert', label: 'Expert' },
+    { value: 'commander', label: 'Commander' },
+  ];
+  static PARTY_LEVEL_OPTIONS = Array.from({ length: 20 }, (_, idx) => {
+    const level = idx + 1;
+    return { value: level, label: `Level ${level}` };
+  });
 
   static DEFAULT_TYPES = this.TYPE_OPTIONS.filter((option) => option.value).map((option) => option.value);
 
@@ -65,13 +75,13 @@ class LocationGenerator {
   static RARITY_WEIGHTS = {
     common: 60,
     uncommon: 25,
-    rare: 12,
-    legendary: 3,
+    rare: 10,
+    legendary: 5,
   };
 
   static TYPE_WEIGHTS = {
-    normal: 95,
-    magic: 5,
+    normal: 90,
+    magic: 10,
   };
 
   static weightedPick(entries) {
@@ -129,41 +139,58 @@ class LocationGenerator {
     return byType[type] || [2, 8];
   }
 
-  static getItemsForHabitat(habitat) {
-    const itemLocationByHabitat = {
-      forest: 'forest',
-      arctic: 'dungeon',
-      desert: 'dungeon',
-      jungle: 'forest',
-      volcanic: 'dungeon',
-      roadside: 'city',
-      urban: 'city',
-      mountain: 'dungeon',
-      swamp: 'forest',
-      plains: 'forest',
-      coast: 'city',
-    };
+  static getTierKeysForMasteryLevel(masteryLevel) {
+    if (masteryLevel === 'novice') {
+      return ['novice'];
+    }
+    if (masteryLevel === 'expert') {
+      return ['expert'];
+    }
+    // Commander maps to highest available item tier.
+    if (masteryLevel === 'commander') {
+      return ['master'];
+    }
+    return ['novice', 'expert', 'master'];
+  }
 
-    const mappedLocation = itemLocationByHabitat[habitat] || this.getRandomFromList(['dungeon', 'forest', 'city']);
-    const allItems = Object.values(ITEM_CATALOG).flatMap((tier) => (
-      ['normal', 'magic'].flatMap((type) => (
-        (tier[type] || [])
-          .filter((entry) => {
-            const locations = entry.locations || (entry.location ? [entry.location] : []);
-            return locations.includes(mappedLocation);
-          })
-          .map((entry) => ({
-            ...entry,
-            type,
-          }))
+  static isPartyLevelEligible(entry, partyLevel) {
+    const requiredLevel = Number(entry?.partyLevel);
+    const selectedPartyLevel = Number(partyLevel);
+    if (!Number.isFinite(requiredLevel) || requiredLevel <= 0) {
+      return true;
+    }
+    if (!Number.isFinite(selectedPartyLevel) || selectedPartyLevel <= 0) {
+      return true;
+    }
+    return selectedPartyLevel >= requiredLevel;
+  }
+
+  static getItemsForHabitat(_habitat, masteryLevel = '', partyLevel = null) {
+    const tierKeys = this.getTierKeysForMasteryLevel(masteryLevel);
+    const allItems = tierKeys.flatMap((tierKey) => {
+      const tier = ITEM_CATALOG[tierKey];
+      if (!tier) {
+        return [];
+      }
+      return ['normal', 'magic'].flatMap((type) => (
+        (tier[type] || []).map((entry) => ({
+          ...entry,
+          type,
+        }))
       ))
-    ));
+      ;
+    });
 
     if (allItems.length === 0) {
       return [];
     }
 
-    const uniqueByName = [...new Map(allItems.map((entry) => [entry.item, entry])).values()];
+    const eligible = allItems.filter((entry) => this.isPartyLevelEligible(entry, partyLevel));
+    if (eligible.length === 0) {
+      return [];
+    }
+
+    const uniqueByName = [...new Map(eligible.map((entry) => [entry.item, entry])).values()];
     const itemCount = this.randomInt(1, Math.min(2, uniqueByName.length));
     const selectedItems = [];
     const usedNames = new Set();
@@ -214,25 +241,26 @@ class LocationGenerator {
     }
 
     return selectedItems.map((entry) => {
-      const [minCost, maxCost] = this.RARITY_COST_RANGES[entry.rarity] || [20, 80];
-      const multiplier = this.TYPE_COST_MULTIPLIER[entry.type] || 1;
       const [minQty, maxQty] = this.QUANTITY_BY_RARITY[entry.rarity] || [1, 3];
-      const rolledCost = Math.round(this.randomInt(minCost, maxCost) * multiplier);
+      const resolvedCost = String(entry.cost || '').trim() || '0';
 
       return {
         item: entry.item,
         details: entry.details,
+        effects: entry.effects || '',
+        damage: entry.damage || '',
         type: entry.type,
         rarity: entry.rarity,
         quantity: this.randomInt(minQty, maxQty),
-        cost: `${rolledCost} GP`,
+        cost: resolvedCost,
       };
     });
   }
 
-  static generateLocation({ type, habitat }) {
+  static generateLocation({ type, habitat, masteryLevel, partyLevel = null }) {
     const resolvedType = type || this.getRandomFromList(this.DEFAULT_TYPES);
     const resolvedHabitat = habitat || this.getRandomFromList(this.DEFAULT_HABITATS);
+    const resolvedMasteryLevel = masteryLevel || '';
     const racesPool = this.RACES_BY_HABITAT[resolvedHabitat] || ['human', 'elf', 'dwarf', 'goblin'];
 
     const inhabitants = this.weightedPick([
@@ -250,7 +278,9 @@ class LocationGenerator {
       inhabitants,
       races: this.uniqueSample(racesPool, racesCount),
       rooms: this.randomInt(minRooms, maxRooms),
-      items: this.getItemsForHabitat(resolvedHabitat),
+      masteryLevel: resolvedMasteryLevel || 'any',
+      partyLevel: Number(partyLevel) || 1,
+      items: this.getItemsForHabitat(resolvedHabitat, resolvedMasteryLevel, partyLevel),
     };
   }
 }

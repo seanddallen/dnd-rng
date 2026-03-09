@@ -35,7 +35,10 @@ import LocationGenerator from '../generators/LocationGenerator';
 import DungeonGenerator from '../generators/DungeonGenerator';
 import SpellGenerator from '../generators/SpellGenerator';
 import { monsterCatalogue } from '../data/monsterCatalogue';
+import { bossCatalogue } from '../data/bossCatalogue';
+import { npcCatalogue } from '../data/npcCatalogue';
 import { parties } from '../data/parties';
+import { ITEM_CATALOG } from '../data/itemCatalog';
 
 const SHOP_RARITY_ORDER = { common: 0, uncommon: 1, rare: 2, legendary: 3 };
 const GENERATOR_TITLE_SX = {
@@ -182,7 +185,14 @@ const TrackerEntryCard = React.memo(function TrackerEntryCard({
 
         <Stack direction="row" spacing={2.25} alignItems="center" sx={{ flexShrink: 0 }}>
           <Stack spacing={0.45} sx={{ width: 116 }}>
-            <Typography variant="body2" sx={{ minWidth: 52, fontWeight: 700, fontSize: '1rem' }}>HP: {entry.hp}</Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ minWidth: 0 }}>
+              <Typography variant="body2" sx={{ minWidth: 52, fontWeight: 700 }}>
+                Max: {entry.maxHp ?? entry.hp}
+              </Typography>
+              <Typography variant="body2" sx={{ minWidth: 52, fontWeight: 700, fontSize: '1rem', textAlign: 'right' }}>
+                HP: {entry.hp}
+              </Typography>
+            </Stack>
             <Stack direction="row" spacing={0.45} alignItems="center">
               <TextField
                 size="small"
@@ -209,7 +219,14 @@ const TrackerEntryCard = React.memo(function TrackerEntryCard({
           </Stack>
 
           <Stack spacing={0.45} sx={{ width: 116 }}>
-            <Typography variant="body2" sx={{ minWidth: 52, fontWeight: 700, fontSize: '1rem' }}>MP: {entry.mp}</Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ minWidth: 0 }}>
+              <Typography variant="body2" sx={{ minWidth: 52, fontWeight: 700 }}>
+                Max: {entry.maxMp ?? entry.mp}
+              </Typography>
+              <Typography variant="body2" sx={{ minWidth: 52, fontWeight: 700, fontSize: '1rem', textAlign: 'right' }}>
+                MP: {entry.mp}
+              </Typography>
+            </Stack>
             <Stack direction="row" spacing={0.45} alignItems="center">
               <TextField
                 size="small"
@@ -290,6 +307,7 @@ const TrackerEntryCard = React.memo(function TrackerEntryCard({
 });
 
 export default function Menu() {
+  const defaultPartyName = parties[0]?.name || '';
   const [value, setValue] = React.useState(10);
   const [explorationManaZone, setExplorationManaZone] = React.useState('safe');
   const [explorationPartyMasteryLevel, setExplorationPartyMasteryLevel] = React.useState('novice');
@@ -297,7 +315,7 @@ export default function Menu() {
   const [generatedExplorationManaEffect, setGeneratedExplorationManaEffect] = React.useState(null);
 
   const [itemTier, setItemTier] = React.useState('novice');
-  const [itemLocation, setItemLocation] = React.useState('dungeon');
+  const [itemPartyName, setItemPartyName] = React.useState(defaultPartyName);
   const [itemTypeFilter, setItemTypeFilter] = React.useState('');
   const [itemRarityFilter, setItemRarityFilter] = React.useState('');
   const [generatedItem, setGeneratedItem] = React.useState(null);
@@ -338,8 +356,9 @@ export default function Menu() {
   const [eventDifficulty, setEventDifficulty] = React.useState('');
   const [generatedEvent, setGeneratedEvent] = React.useState(null);
 
-  const [npcHabitat, setNpcHabitat] = React.useState('urban');
+  const [npcHabitat, setNpcHabitat] = React.useState('');
   const [npcAttitude, setNpcAttitude] = React.useState('');
+  const [npcGender, setNpcGender] = React.useState('');
   const [npcRace, setNpcRace] = React.useState('');
   const [npcClass, setNpcClass] = React.useState('');
   const [generatedNpc, setGeneratedNpc] = React.useState(null);
@@ -348,8 +367,11 @@ export default function Menu() {
   const [selectedShop, setSelectedShop] = React.useState('');
   const [shopType, setShopType] = React.useState('');
   const [shopLocation, setShopLocation] = React.useState('');
+  const [shopPartyName, setShopPartyName] = React.useState(defaultPartyName);
   const [shopPartyMasteryLevel, setShopPartyMasteryLevel] = React.useState('');
   const [generatedShop, setGeneratedShop] = React.useState(null);
+  const [isShopAddItemDialogOpen, setIsShopAddItemDialogOpen] = React.useState(false);
+  const [shopAddItemQuery, setShopAddItemQuery] = React.useState('');
   const [spellColor, setSpellColor] = React.useState('blue');
   const [spellClass, setSpellClass] = React.useState('');
   const [spellMasteryLevel, setSpellMasteryLevel] = React.useState('novice');
@@ -358,6 +380,8 @@ export default function Menu() {
   const [generatedWildMagic, setGeneratedWildMagic] = React.useState(null);
   const [locationType, setLocationType] = React.useState('');
   const [locationHabitat, setLocationHabitat] = React.useState('');
+  const [locationPartyName, setLocationPartyName] = React.useState(defaultPartyName);
+  const [locationMasteryLevel, setLocationMasteryLevel] = React.useState('');
   const [generatedLocation, setGeneratedLocation] = React.useState(null);
   const [locationPanelMode, setLocationPanelMode] = React.useState(null);
   const [dungeonType, setDungeonType] = React.useState('');
@@ -402,14 +426,24 @@ export default function Menu() {
     setValue(newValue);
   };
 
+  const resolveSelectedPartyLevel = (partyName) => {
+    const selectedParty = parties.find((entry) => entry.name === partyName);
+    return Number(selectedParty?.level) || 1;
+  };
+
   const generateItem = () => {
+    const selectedPartyLevel = resolveSelectedPartyLevel(itemPartyName);
     const result = ItemGenerator.generateItem({
       levelTier: itemTier,
-      location: itemLocation,
       typeFilter: itemTypeFilter || null,
       rarityFilter: itemRarityFilter || null,
+      partyLevel: selectedPartyLevel,
     });
-    setGeneratedItem(result);
+    setGeneratedItem({
+      ...result,
+      selectedPartyName: itemPartyName || 'None',
+      selectedPartyLevel,
+    });
   };
 
   const generateExploration = () => {
@@ -527,6 +561,8 @@ export default function Menu() {
       initiativeRoll,
       totalRoll,
       initiative: totalRoll,
+      maxHp: Number.isFinite(entry.maxHp) ? entry.maxHp : entry.hp,
+      maxMp: Number.isFinite(entry.maxMp) ? entry.maxMp : entry.mp,
       abilities: [],
       statuses: [],
       ...entry,
@@ -637,13 +673,16 @@ export default function Menu() {
     const partyEntries = selectedParty.characters.map((member, idx) => {
       const initiativeBonus = EncounterTrackerGenerator.parseInitiativeBonus(member.initiativeBonus);
       const initiativeRoll = EncounterTrackerGenerator.rollInitiative(initiativeBonus);
+      const displayName = member.characterName || member.name;
       return {
         id: `party-${partyName}-${member.name}-${idx}-${Math.random().toString(36).slice(2, 8)}`,
         side: 'party',
-        name: member.name,
+        name: displayName,
         type: member.character,
         hp: member.hp,
         mp: member.mp,
+        maxHp: member.hp,
+        maxMp: member.mp,
         ac: member.ac,
         rc: member.rc,
         ab: member.ab,
@@ -859,6 +898,7 @@ export default function Menu() {
     const result = NpcGenerator.generateNpc({
       habitat: npcHabitat,
       attitude: npcAttitude,
+      gender: npcGender || null,
       race: npcRace || null,
       characterClass: npcClass || null,
     });
@@ -875,13 +915,20 @@ export default function Menu() {
   };
 
   const generateShop = () => {
+    const selectedPartyLevel = resolveSelectedPartyLevel(shopPartyName);
     const result = ShopGenerator.generateShop({
       selectedShop: selectedShop || null,
       shopType: shopType || null,
       location: shopLocation || null,
       partyMasteryLevel: shopPartyMasteryLevel,
+      partyLevel: selectedPartyLevel,
     });
-    setGeneratedShop(result);
+    setGeneratedShop({
+      ...result,
+      selectedPartyName: shopPartyName || 'None',
+      selectedPartyLevel,
+      hardcodedInventory: result.source === 'known-shop' ? (result.inventory || []).map((entry) => ({ ...entry })) : [],
+    });
   };
 
   const generateSpell = () => {
@@ -914,11 +961,18 @@ export default function Menu() {
   };
 
   const generateLocation = () => {
+    const selectedPartyLevel = resolveSelectedPartyLevel(locationPartyName);
     const result = LocationGenerator.generateLocation({
       type: locationType || null,
       habitat: locationHabitat || null,
+      masteryLevel: locationMasteryLevel || null,
+      partyLevel: selectedPartyLevel,
     });
-    setGeneratedLocation(result);
+    setGeneratedLocation({
+      ...result,
+      selectedPartyName: locationPartyName || 'None',
+      selectedPartyLevel,
+    });
     setLocationPanelMode('location');
   };
 
@@ -950,13 +1004,143 @@ export default function Menu() {
       return String(a.item).localeCompare(String(b.item));
     });
   }, [generatedShop]);
+  const allShopAddableItems = React.useMemo(() => (
+    Object.values(ITEM_CATALOG).flatMap((tier) => (
+      ['normal', 'magic'].flatMap((type) => (
+        (tier[type] || []).map((entry) => ({
+          item: entry.item,
+          details: entry.details || 'No details provided.',
+          effects: entry.effects || '',
+          damage: entry.damage || '',
+          type,
+          rarity: entry.rarity || 'common',
+          size: entry.size || 'unknown',
+          cost: entry.cost || '0',
+        }))
+      ))
+    ))
+  ), []);
+  const filteredShopAddItemResults = React.useMemo(() => {
+    const query = shopAddItemQuery.trim().toLowerCase();
+    if (!query) {
+      return [];
+    }
+
+    return allShopAddableItems
+      .filter((entry) => String(entry.item || '').toLowerCase().includes(query))
+      .sort((a, b) => String(a.item).localeCompare(String(b.item)))
+      .slice(0, 50);
+  }, [allShopAddableItems, shopAddItemQuery]);
+  const addItemToGeneratedShop = React.useCallback((entry) => {
+    if (!entry || !generatedShop) {
+      return;
+    }
+
+    setGeneratedShop((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      const alreadyExists = (prev.inventory || []).some((inv) => inv.item === entry.item);
+      if (alreadyExists) {
+        return prev;
+      }
+      return {
+        ...prev,
+        inventory: [
+          ...(prev.inventory || []),
+          {
+            ...entry,
+            quantity: 1,
+          },
+        ],
+      };
+    });
+    setShopAddItemQuery('');
+    setIsShopAddItemDialogOpen(false);
+  }, [generatedShop]);
+  const regenerateShopInventory = React.useCallback(() => {
+    if (!generatedShop) {
+      return;
+    }
+
+    const selectedPartyLevel = resolveSelectedPartyLevel(shopPartyName);
+    const shopDefinedTypeRaw = generatedShop.storeType;
+    const shopDefinedType = Array.isArray(shopDefinedTypeRaw)
+      ? (shopDefinedTypeRaw[0] || '')
+      : (shopDefinedTypeRaw || '');
+    const resolvedShopType = shopDefinedType
+      || (generatedShop.shopType && generatedShop.shopType !== 'any' ? generatedShop.shopType : '')
+      || (shopType || '');
+    const resolvedLocation = generatedShop.location && generatedShop.location !== 'varied'
+      ? generatedShop.location
+      : (shopLocation || '');
+
+    const generatedInventory = ShopGenerator.buildRandomInventory(
+      resolvedLocation,
+      resolvedShopType,
+      shopPartyMasteryLevel,
+      selectedPartyLevel,
+    );
+
+    let nextInventory = generatedInventory;
+    const hardcodedInventory = Array.isArray(generatedShop.hardcodedInventory)
+      ? generatedShop.hardcodedInventory
+      : [];
+    if (generatedShop.source === 'known-shop' && hardcodedInventory.length > 0) {
+      const targetSize = Math.max(generatedInventory.length, hardcodedInventory.length);
+      const merged = hardcodedInventory.map((entry) => ({ ...entry }));
+      const usedNames = new Set(merged.map((entry) => entry.item));
+
+      const appendUniqueFrom = (list) => {
+        for (const entry of list) {
+          if (merged.length >= targetSize) {
+            break;
+          }
+          if (usedNames.has(entry.item)) {
+            continue;
+          }
+          usedNames.add(entry.item);
+          merged.push({ ...entry, quantity: 1 });
+        }
+      };
+
+      appendUniqueFrom(generatedInventory);
+      let attempts = 0;
+      while (merged.length < targetSize && attempts < 4) {
+        attempts += 1;
+        const extra = ShopGenerator.buildRandomInventory(
+          resolvedLocation,
+          resolvedShopType,
+          shopPartyMasteryLevel,
+          selectedPartyLevel,
+        );
+        appendUniqueFrom(extra);
+      }
+
+      nextInventory = merged;
+    }
+
+    setGeneratedShop((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      return {
+        ...prev,
+        inventory: nextInventory,
+        partyMasteryLevel: shopPartyMasteryLevel || 'none (base rarity weights)',
+        selectedPartyName: shopPartyName || 'None',
+        selectedPartyLevel,
+      };
+    });
+  }, [generatedShop, shopLocation, shopPartyMasteryLevel, shopPartyName, shopType]);
   const filteredCreatureSearchResults = React.useMemo(() => {
     const query = addCreatureSearchQuery.trim().toLowerCase();
     if (!query) {
       return [];
     }
 
-    return monsterCatalogue
+    const combinedCatalogue = [...monsterCatalogue, ...bossCatalogue, ...npcCatalogue];
+    return combinedCatalogue
       .filter((monster) => String(monster.name || '').toLowerCase().includes(query))
       .sort((a, b) => String(a.name).localeCompare(String(b.name)))
       .slice(0, 25);
@@ -1755,7 +1939,7 @@ export default function Menu() {
           >
             <Typography variant="h6" sx={GENERATOR_TITLE_SX}>Item Generator</Typography>
             <Typography variant="body2">
-              Choose level and location. Type and rarity weights are hardcoded.
+              Choose tier with optional type/rarity filters. Type and rarity weights are hardcoded.
             </Typography>
 
             <Paper sx={{ p: 2 }} variant="outlined">
@@ -1775,15 +1959,17 @@ export default function Menu() {
                 </FormControl>
 
                 <FormControl fullWidth>
-                  <InputLabel id="location-select-label">Location</InputLabel>
+                  <InputLabel id="item-party-select-label">Party</InputLabel>
                   <Select
-                    labelId="location-select-label"
-                    value={itemLocation}
-                    label="Location"
-                    onChange={(event) => setItemLocation(event.target.value)}
+                    labelId="item-party-select-label"
+                    value={itemPartyName}
+                    label="Party"
+                    onChange={(event) => setItemPartyName(event.target.value)}
                   >
-                    {ItemGenerator.LOCATION_OPTIONS.map((option) => (
-                      <MuiMenuItem key={option.value} value={option.value}>{option.label}</MuiMenuItem>
+                    {parties.map((entry) => (
+                      <MuiMenuItem key={`item-party-${entry.name}`} value={entry.name}>
+                        {entry.name} (Level {entry.level})
+                      </MuiMenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -1841,9 +2027,12 @@ export default function Menu() {
                 <Typography variant="h6">Item Details</Typography>
                 <Typography variant="subtitle1">{generatedItem.item}</Typography>
                 <Typography variant="body2">Details: {generatedItem.details}</Typography>
+                {generatedItem.damage && <Typography variant="body2">Damage: {generatedItem.damage}</Typography>}
                 <Typography variant="body2">Level Group: {ItemGenerator.getLevelGroupLabel(itemTier)}</Typography>
-                <Typography variant="body2">Location: {itemLocation}</Typography>
                 <Typography variant="body2">Tier: {itemTier}</Typography>
+                <Typography variant="body2">
+                  Party: {generatedItem.selectedPartyName} (Level {generatedItem.selectedPartyLevel})
+                </Typography>
                 <Typography variant="body2">Type: {generatedItem.type}</Typography>
                 <Typography variant="body2">Rarity: {generatedItem.rarity}</Typography>
                 <Typography variant="body2">Size: {generatedItem.size || 'unknown'}</Typography>
@@ -1877,11 +2066,11 @@ export default function Menu() {
             <Paper sx={{ p: 2 }} variant="outlined">
               <Stack spacing={2}>
                 <FormControl fullWidth>
-                  <InputLabel id="npc-habitat-select-label">Habitat</InputLabel>
+                  <InputLabel id="npc-habitat-select-label">Habitat (Optional)</InputLabel>
                   <Select
                     labelId="npc-habitat-select-label"
                     value={npcHabitat}
-                    label="Habitat"
+                    label="Habitat (Optional)"
                     onChange={(event) => setNpcHabitat(event.target.value)}
                   >
                     {NpcGenerator.HABITAT_OPTIONS.map((option) => (
@@ -1902,6 +2091,22 @@ export default function Menu() {
                     {NpcGenerator.npcOptions.hostility.map((entry) => (
                       <MuiMenuItem key={entry.attitude} value={entry.attitude}>
                         {entry.attitude}
+                      </MuiMenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel id="npc-gender-select-label">Gender (Optional)</InputLabel>
+                  <Select
+                    labelId="npc-gender-select-label"
+                    value={npcGender}
+                    label="Gender (Optional)"
+                    onChange={(event) => setNpcGender(event.target.value)}
+                  >
+                    {NpcGenerator.GENDER_OPTIONS.map((entry) => (
+                      <MuiMenuItem key={entry.value || 'npc-gender-auto'} value={entry.value}>
+                        {entry.label}
                       </MuiMenuItem>
                     ))}
                   </Select>
@@ -1961,6 +2166,7 @@ export default function Menu() {
               <Stack spacing={0.75} sx={{ textAlign: 'left' }}>
                 <Typography variant="h6">NPC Details</Typography>
                 <Typography variant="subtitle1">{generatedNpc.name}</Typography>
+                <Typography variant="body2">Gender: {generatedNpc.gender}</Typography>
                 <Typography variant="body2">Race: {generatedNpc.race}</Typography>
                 <Typography variant="body2">Class: {generatedNpc.characterClass}</Typography>
                 <Typography variant="body2">Age: {generatedNpc.age}</Typography>
@@ -2080,6 +2286,22 @@ export default function Menu() {
                     ))}
                   </Select>
                 </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel id="shop-party-select-label">Party</InputLabel>
+                  <Select
+                    labelId="shop-party-select-label"
+                    value={shopPartyName}
+                    label="Party"
+                    onChange={(event) => setShopPartyName(event.target.value)}
+                  >
+                    {parties.map((entry) => (
+                      <MuiMenuItem key={`shop-party-${entry.name}`} value={entry.name}>
+                        {entry.name} (Level {entry.level})
+                      </MuiMenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Stack>
             </Paper>
 
@@ -2098,13 +2320,34 @@ export default function Menu() {
               variant="outlined"
             >
               <Stack spacing={0.5} sx={{ textAlign: 'left' }}>
-                <Typography variant="h6">Shop Details</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                  <Typography variant="h6">Shop Details</Typography>
+                  <Stack direction="column" spacing={0.75} alignItems="flex-end">
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setIsShopAddItemDialogOpen(true)}
+                    >
+                      Add Item
+                    </Button>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={regenerateShopInventory}
+                    >
+                      Generate
+                    </Button>
+                  </Stack>
+                </Box>
                 <Typography variant="subtitle1">{generatedShop.shop}</Typography>
                 <Typography variant="body2" sx={{ lineHeight: 1.15 }}>
                   Source: {generatedShop.source === 'known-shop' ? 'Known shop' : 'Random location shop'}
                 </Typography>
                 <Typography variant="body2" sx={{ lineHeight: 1.15 }}>
                   Party Mastery Level: {generatedShop.partyMasteryLevel}
+                </Typography>
+                <Typography variant="body2" sx={{ lineHeight: 1.15 }}>
+                  Party: {generatedShop.selectedPartyName} (Level {generatedShop.selectedPartyLevel})
                 </Typography>
                 <Typography variant="body2" sx={{ lineHeight: 1.15 }}>Location: {generatedShop.location}</Typography>
                 <Typography variant="body2" sx={{ lineHeight: 1.15 }}>Shop Details: {generatedShop.shopDetails}</Typography>
@@ -2149,6 +2392,16 @@ export default function Menu() {
                     <Typography variant="body2" sx={{ m: 0, p: 0, lineHeight: 1.1 }}>
                       Details: {entry.details}
                     </Typography>
+                    {entry.damage && (
+                      <Typography variant="body2" sx={{ m: 0, p: 0, lineHeight: 1.1 }}>
+                        Damage: {entry.damage}
+                      </Typography>
+                    )}
+                    {entry.effects && (
+                      <Typography variant="body2" sx={{ m: 0, p: 0, lineHeight: 1.1 }}>
+                        Effects: {entry.effects}
+                      </Typography>
+                    )}
                     {entry.rarity && <Typography variant="body2">Rarity: {entry.rarity}</Typography>}
                     <Typography variant="body2">Type: {entry.type}</Typography>
                     <Typography variant="body2">Size: {entry.size || 'unknown'}</Typography>
@@ -2159,6 +2412,68 @@ export default function Menu() {
             </Paper>
           )}
         </Box>
+        <Dialog
+          open={isShopAddItemDialogOpen}
+          onClose={() => {
+            setIsShopAddItemDialogOpen(false);
+            setShopAddItemQuery('');
+          }}
+          fullWidth
+          maxWidth="md"
+        >
+          <DialogTitle>Add Item</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={1.25}>
+              <TextField
+                label="Search Item Name"
+                value={shopAddItemQuery}
+                onChange={(event) => setShopAddItemQuery(event.target.value)}
+                fullWidth
+                autoFocus
+              />
+              {shopAddItemQuery.trim().length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Type to search items by name.
+                </Typography>
+              ) : filteredShopAddItemResults.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No matching items found.
+                </Typography>
+              ) : (
+                <Stack spacing={1}>
+                  {filteredShopAddItemResults.map((entry, idx) => (
+                    <Paper key={`${entry.item}-${idx}`} variant="outlined" sx={{ p: 1.25 }}>
+                      <Stack spacing={0.5}>
+                        <Typography variant="subtitle2">{entry.item}</Typography>
+                        <Typography variant="body2">Details: {entry.details}</Typography>
+                        <Typography variant="body2">Effects: {entry.effects || ''}</Typography>
+                        <Box>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => addItemToGeneratedShop(entry)}
+                          >
+                            Select
+                          </Button>
+                        </Box>
+                      </Stack>
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setIsShopAddItemDialogOpen(false);
+                setShopAddItemQuery('');
+              }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
       </TabPanel>
 
       <TabPanel value={value} index={5}>
@@ -2351,6 +2666,38 @@ export default function Menu() {
                     ))}
                   </Select>
                 </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel id="location-mastery-select-label">Mastery Level (Optional)</InputLabel>
+                  <Select
+                    labelId="location-mastery-select-label"
+                    value={locationMasteryLevel}
+                    label="Mastery Level (Optional)"
+                    onChange={(event) => setLocationMasteryLevel(event.target.value)}
+                  >
+                    {LocationGenerator.MASTERY_LEVEL_OPTIONS.map((option) => (
+                      <MuiMenuItem key={option.value || 'any-location-mastery'} value={option.value}>
+                        {option.label}
+                      </MuiMenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel id="location-party-select-label">Party</InputLabel>
+                  <Select
+                    labelId="location-party-select-label"
+                    value={locationPartyName}
+                    label="Party"
+                    onChange={(event) => setLocationPartyName(event.target.value)}
+                  >
+                    {parties.map((entry) => (
+                      <MuiMenuItem key={`location-party-${entry.name}`} value={entry.name}>
+                        {entry.name} (Level {entry.level})
+                      </MuiMenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Stack>
             </Paper>
 
@@ -2420,6 +2767,10 @@ export default function Menu() {
                 <Typography variant="h6">Location Details</Typography>
                 <Typography variant="body2">Habitat: {generatedLocation.habitat}</Typography>
                 <Typography variant="body2">Type: {generatedLocation.type}</Typography>
+                <Typography variant="body2">Mastery Level: {generatedLocation.masteryLevel}</Typography>
+                <Typography variant="body2">
+                  Party: {generatedLocation.selectedPartyName} (Level {generatedLocation.selectedPartyLevel})
+                </Typography>
                 <Typography variant="body2">Inhabitants: {generatedLocation.inhabitants}</Typography>
                 <Typography variant="body2">Races: {JSON.stringify(generatedLocation.races)}</Typography>
                 <Typography variant="body2">Rooms: {generatedLocation.rooms}</Typography>
@@ -2463,6 +2814,16 @@ export default function Menu() {
                         <Typography variant="body2" sx={{ m: 0, p: 0, lineHeight: 1.1 }}>
                           Details: {entry.details}
                         </Typography>
+                        {entry.damage && (
+                          <Typography variant="body2" sx={{ m: 0, p: 0, lineHeight: 1.1 }}>
+                            Damage: {entry.damage}
+                          </Typography>
+                        )}
+                        {entry.effects && (
+                          <Typography variant="body2" sx={{ m: 0, p: 0, lineHeight: 1.1 }}>
+                            Effects: {entry.effects}
+                          </Typography>
+                        )}
                         {entry.rarity && <Typography variant="body2">Rarity: {entry.rarity}</Typography>}
                         <Typography variant="body2">Type: {entry.type}</Typography>
                       </Paper>
@@ -2715,7 +3076,54 @@ export default function Menu() {
             >
               <Stack spacing={1} sx={{ textAlign: 'left' }}>
                 <Typography variant="h6">{selectedReminder.title}</Typography>
-                {selectedReminder.details.map((line, idx) => (
+                {selectedReminder.key === 'gold_reward' ? (
+                  <>
+                    {(selectedReminder.details || []).map((line, idx) => (
+                      <Typography key={`${selectedReminder.key}-intro-${idx}`} variant="body2" sx={{ fontWeight: 700 }}>
+                        {line}
+                      </Typography>
+                    ))}
+                    <Box sx={{ overflowX: 'auto' }}>
+                      <Box
+                        component="table"
+                        sx={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          mt: 0.5,
+                          '& th, & td': {
+                            border: '1px solid rgba(0,0,0,0.2)',
+                            px: 1,
+                            py: 0.5,
+                            textAlign: 'left',
+                          },
+                          '& th': {
+                            fontWeight: 700,
+                            backgroundColor: 'rgba(0,0,0,0.04)',
+                          },
+                        }}
+                      >
+                        <thead>
+                          <tr>
+                            <th>Level</th>
+                            <th>Easy</th>
+                            <th>Moderate</th>
+                            <th>Hard</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(selectedReminder.chart || []).map((row) => (
+                            <tr key={`gold-reward-row-${row.level}`}>
+                              <td>{row.level}</td>
+                              <td>{row.easy}</td>
+                              <td>{row.moderate}</td>
+                              <td>{row.hard}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Box>
+                    </Box>
+                  </>
+                ) : selectedReminder.details.map((line, idx) => (
                   <Typography key={`${selectedReminder.key}-${idx}`} variant="body2">
                     {(() => {
                       if (typeof line !== 'string') {
@@ -2750,6 +3158,30 @@ export default function Menu() {
                       if (
                         selectedReminder.key === 'death_resurrection'
                         && (line === 'Death' || line === 'Party Aid' || line === 'Progression' || line === 'Resurrection')
+                      ) {
+                        return <Box component="span" sx={{ fontWeight: 700 }}>{line}</Box>;
+                      }
+
+                      if (
+                        selectedReminder.key === 'services_vehicles'
+                        && (
+                          line === 'Services (SRD)'
+                          || line === 'Mounts and Other Animals'
+                          || line === 'Tack, Harness, and Drawn Vehicles'
+                          || line === 'Waterborne Vehicles'
+                        )
+                      ) {
+                        return <Box component="span" sx={{ fontWeight: 700 }}>{line}</Box>;
+                      }
+
+                      if (
+                        selectedReminder.key === 'rest_exhaustion'
+                        && (
+                          line === 'Short Rest'
+                          || line === 'Long Rest'
+                          || line === 'Interrupting the Rest'
+                          || line === 'Exhaustion'
+                        )
                       ) {
                         return <Box component="span" sx={{ fontWeight: 700 }}>{line}</Box>;
                       }

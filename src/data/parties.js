@@ -1,11 +1,15 @@
 export const parties = [
   {
     name: 'Home Party',
+    level: 1,
     characters: [
       {
         name: 'Sylvara Opalite',
         character: 'Elf Cleric',
         initiativeBonus: '+1',
+        weapon: "Quarterstaff",
+        armor: "",
+        shield: "",
         ml: 1,
         hp: 10,
         mp: 10,
@@ -58,9 +62,11 @@ export const parties = [
   },
   {
     name: 'Roll Players',
+    level: 1,
     characters: [
       {
         name: 'Nate',
+        characterName: 'Alduin',
         character: 'Dragonborn Paladin',
         initiativeBonus: '+1',
         ml: 1,
@@ -74,6 +80,7 @@ export const parties = [
       },
       {
         name: 'Josh',
+        characterName: 'Muckworm',
         character: 'Goblin Rogue',
         initiativeBonus: '+3',
         ml: 1,
@@ -87,6 +94,7 @@ export const parties = [
       },
       {
         name: 'Kyle',
+        characterName: 'Nekusar Iora',
         character: 'Human Warlock',
         initiativeBonus: '+0',
         ml: 1,
@@ -100,6 +108,7 @@ export const parties = [
       },
       {
         name: 'Clinton',
+        characterName: 'Wyclef',
         character: 'Human Wizard',
         initiativeBonus: '+0',
         ml: 1,
@@ -110,6 +119,20 @@ export const parties = [
         ab: 1,
         fb: 7,
         db: 0,
+      },
+      {
+        name: 'Dalton',
+        characterName: 'Ugluk Uruk-hai',
+        character: 'Orc Barbarian',
+        initiativeBonus: '+2',
+        ml: 1,
+        hp: 12,
+        mp: 6,
+        ac: 12,
+        rc: 8,
+        ab: 5,
+        fb: 3,
+        db: 2,
       },
     ],
   },
