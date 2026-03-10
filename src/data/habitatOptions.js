@@ -11,5 +11,6 @@ export const EVENT_HABITAT_OPTIONS = [
   { value: 'urban', label: 'Urban' },
   { value: 'plains', label: 'Plains' },
   { value: 'coast', label: 'Coast' },
+  { value: 'ocean', label: 'Ocean' },
+  { value: 'ruins', label: 'Ruins' },
 ];
-

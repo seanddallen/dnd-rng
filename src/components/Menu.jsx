@@ -39,6 +39,7 @@ import { bossCatalogue } from '../data/bossCatalogue';
 import { npcCatalogue } from '../data/npcCatalogue';
 import { parties } from '../data/parties';
 import { ITEM_CATALOG } from '../data/itemCatalog';
+import { rumorCatalogue } from '../data/rumorCatalogue';
 
 const SHOP_RARITY_ORDER = { common: 0, uncommon: 1, rare: 2, legendary: 3 };
 const GENERATOR_TITLE_SX = {
@@ -351,7 +352,8 @@ export default function Menu() {
   const [customCreatureDb, setCustomCreatureDb] = React.useState('');
   const [customCreatureHp, setCustomCreatureHp] = React.useState('');
   const [customCreatureMp, setCustomCreatureMp] = React.useState('');
-  const [eventHabitat, setEventHabitat] = React.useState('forest');
+  const [eventCity, setEventCity] = React.useState('');
+  const [eventHabitat, setEventHabitat] = React.useState('');
   const [eventManaZone, setEventManaZone] = React.useState('safe');
   const [eventDifficulty, setEventDifficulty] = React.useState('');
   const [generatedEvent, setGeneratedEvent] = React.useState(null);
@@ -362,8 +364,13 @@ export default function Menu() {
   const [npcRace, setNpcRace] = React.useState('');
   const [npcClass, setNpcClass] = React.useState('');
   const [generatedNpc, setGeneratedNpc] = React.useState(null);
+  const [generatedRumor, setGeneratedRumor] = React.useState(null);
+  const [questPartyName, setQuestPartyName] = React.useState(defaultPartyName);
+  const [questType, setQuestType] = React.useState('');
+  const [questHabitat, setQuestHabitat] = React.useState('');
+  const [questDifficulty, setQuestDifficulty] = React.useState('');
+  const [questRewardType, setQuestRewardType] = React.useState('');
   const [generatedQuest, setGeneratedQuest] = React.useState(null);
-  const [npcPanelMode, setNpcPanelMode] = React.useState(null);
   const [selectedShop, setSelectedShop] = React.useState('');
   const [shopType, setShopType] = React.useState('');
   const [shopLocation, setShopLocation] = React.useState('');
@@ -488,7 +495,8 @@ export default function Menu() {
 
   const generateEvent = () => {
     const result = EventGenerator.generateEvent({
-      habitat: eventHabitat,
+      habitat: eventHabitat || null,
+      city: eventCity || null,
       manaZone: eventManaZone,
       difficulty: eventDifficulty || null,
     });
@@ -903,15 +911,134 @@ export default function Menu() {
       characterClass: npcClass || null,
     });
     setGeneratedNpc(result);
-    setNpcPanelMode('npc');
+  };
+  const generateRumor = () => {
+    if (!rumorCatalogue.length) {
+      setGeneratedRumor(null);
+      return;
+    }
+    const rumor = rumorCatalogue[Math.floor(Math.random() * rumorCatalogue.length)];
+    setGeneratedRumor(rumor);
   };
 
   const generateQuest = () => {
-    const result = QuestGenerator.generateQuest({
-      location: npcHabitat || null,
+    const selectedPartyLevel = resolveSelectedPartyLevel(questPartyName);
+    const baseQuest = QuestGenerator.generateQuest({
+      location: questHabitat || null,
+      questType: questType || null,
     });
-    setGeneratedQuest(result);
-    setNpcPanelMode('quest');
+
+    const selectedDifficulty = questDifficulty || '';
+    const resolvedDifficulty = selectedDifficulty || baseQuest.difficulty;
+
+    const toRewardDifficultyKey = (difficulty) => {
+      const normalized = String(difficulty || '').toLowerCase();
+      if (normalized === 'easy' || normalized === 'minor') {
+        return 'minor';
+      }
+      if (normalized === 'standard' || normalized === 'moderate') {
+        return 'standard';
+      }
+      if (normalized === 'deadly' || normalized === 'dangerous' || normalized === 'hard') {
+        return 'dangerous';
+      }
+      if (normalized === 'epic') {
+        return 'epic';
+      }
+      return 'standard';
+    };
+
+    const getMlTierByPartyLevel = (partyLevel) => {
+      if (partyLevel <= 4) return 'ml1';
+      if (partyLevel <= 9) return 'ml2';
+      if (partyLevel <= 14) return 'ml3';
+      return 'ml4';
+    };
+
+    const goldRewardsByTier = {
+      ml1: { minor: 25, standard: 50, dangerous: 250, epic: 1000 },
+      ml2: { minor: 50, standard: 250, dangerous: 1000, epic: 5000 },
+      ml3: { minor: 100, standard: 500, dangerous: 2500, epic: 10000 },
+      ml4: { minor: 250, standard: 1000, dangerous: 5000, epic: 15000 },
+    };
+
+    const toCanonicalQuestDifficulty = (difficulty) => {
+      const normalized = String(difficulty || '').toLowerCase();
+      if (normalized === 'easy' || normalized === 'minor') {
+        return 'easy';
+      }
+      if (normalized === 'standard' || normalized === 'moderate') {
+        return 'standard';
+      }
+      if (normalized === 'deadly' || normalized === 'dangerous' || normalized === 'hard') {
+        return 'deadly';
+      }
+      if (normalized === 'epic') {
+        return 'epic';
+      }
+      return 'standard';
+    };
+
+    const getItemTierByPartyLevel = (partyLevel) => {
+      if (partyLevel <= 4) return 'novice';
+      if (partyLevel <= 9) return 'expert';
+      if (partyLevel <= 14) return 'master';
+      return 'commander';
+    };
+
+    let resolvedReward = baseQuest.reward;
+    let rewardItem = null;
+    let rewardGold = '';
+    const rewardChoice = questRewardType || (Math.random() < 0.5 ? 'item' : 'gold');
+    const canonicalDifficulty = toCanonicalQuestDifficulty(resolvedDifficulty);
+
+    if (rewardChoice === 'item') {
+      const itemTier = getItemTierByPartyLevel(selectedPartyLevel);
+      const itemRulesByDifficulty = {
+        easy: { type: 'normal', rarity: 'uncommon' },
+        standard: { type: 'normal', rarity: 'rare' },
+        deadly: { type: 'magic', rarity: 'rare' },
+        epic: { type: 'magic', rarity: 'legendary' },
+      };
+      const itemRule = itemRulesByDifficulty[canonicalDifficulty] || itemRulesByDifficulty.standard;
+      const tierPool = (ITEM_CATALOG[itemTier]?.[itemRule.type] || []).filter((entry) => (
+        entry.rarity === itemRule.rarity
+          && ItemGenerator.isPartyLevelEligible(entry, selectedPartyLevel)
+      ));
+
+      if (tierPool.length > 0) {
+        const picked = tierPool[Math.floor(Math.random() * tierPool.length)];
+        rewardItem = {
+          ...picked,
+          type: itemRule.type,
+          rarity: itemRule.rarity,
+        };
+      } else {
+        rewardItem = null;
+      }
+
+      resolvedReward = rewardItem?.item
+        ? `Item: ${rewardItem.item}`
+        : `Item: No ${itemRule.rarity} ${itemRule.type} item found for ${itemTier}`;
+    } else if (rewardChoice === 'gold') {
+      const mlTier = getMlTierByPartyLevel(selectedPartyLevel);
+      const rewardDifficultyKey = toRewardDifficultyKey(resolvedDifficulty);
+      const goldValue = goldRewardsByTier[mlTier][rewardDifficultyKey];
+      rewardGold = `${goldValue} GP`;
+      resolvedReward = `Gold: ${rewardGold}`;
+    }
+
+    setGeneratedQuest({
+      ...baseQuest,
+      difficulty: resolvedDifficulty,
+      reward: resolvedReward,
+      rewardType: rewardChoice,
+      rewardItem,
+      rewardGold,
+      selectedPartyName: questPartyName || 'None',
+      selectedPartyLevel,
+      habitat: questHabitat || 'Any Habitat',
+    });
   };
 
   const generateShop = () => {
@@ -1159,6 +1286,7 @@ export default function Menu() {
         <Tab value={0} label="Encounters" {...a11yProps(0)} />
         <Tab value={1} label="Events" {...a11yProps(1)} />
         <Tab value={3} label="NPCs" {...a11yProps(3)} />
+        <Tab value={11} label="Quests" {...a11yProps(11)} />
         <Tab value={2} label="Items" {...a11yProps(2)} />
         <Tab value={4} label="Shops" {...a11yProps(4)} />
         <Tab value={5} label="Spells" {...a11yProps(5)} />
@@ -1845,15 +1973,29 @@ export default function Menu() {
             <Paper sx={{ p: 2 }} variant="outlined">
               <Stack spacing={2}>
                 <FormControl fullWidth>
-                  <InputLabel id="event-habitat-select-label">Habitat</InputLabel>
+                  <InputLabel id="event-city-select-label">City (Optional)</InputLabel>
+                  <Select
+                    labelId="event-city-select-label"
+                    value={eventCity}
+                    label="City (Optional)"
+                    onChange={(event) => setEventCity(event.target.value)}
+                  >
+                    {EventGenerator.CITY_OPTIONS.map((option) => (
+                      <MuiMenuItem key={option.value || 'any-city-area'} value={option.value}>{option.label}</MuiMenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel id="event-habitat-select-label">Habitat (Optional)</InputLabel>
                   <Select
                     labelId="event-habitat-select-label"
                     value={eventHabitat}
-                    label="Habitat"
+                    label="Habitat (Optional)"
                     onChange={(event) => setEventHabitat(event.target.value)}
                   >
                     {EventGenerator.HABITAT_OPTIONS.map((option) => (
-                      <MuiMenuItem key={option.value} value={option.value}>{option.label}</MuiMenuItem>
+                      <MuiMenuItem key={option.value || 'any-event-habitat'} value={option.value}>{option.label}</MuiMenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -1865,6 +2007,7 @@ export default function Menu() {
                     value={eventManaZone}
                     label="Mana Zone"
                     onChange={(event) => setEventManaZone(event.target.value)}
+                    disabled={Boolean(eventCity)}
                   >
                     {EventGenerator.MANA_ZONE_OPTIONS.map((option) => (
                       <MuiMenuItem key={option.value} value={option.value}>{option.label}</MuiMenuItem>
@@ -1912,7 +2055,16 @@ export default function Menu() {
                 ) : (
                   <>
                     <Typography variant="subtitle1">Event: {generatedEvent.event}</Typography>
-                    <Typography variant="body2">Habitat: {generatedEvent.habitat}</Typography>
+                    {generatedEvent.city ? (
+                      <Typography variant="body2">
+                        City: {(EventGenerator.CITY_OPTIONS.find((entry) => entry.value === generatedEvent.city)?.label) || generatedEvent.city}
+                      </Typography>
+                    ) : (
+                      <>
+                        <Typography variant="body2">Habitat: {generatedEvent.habitat}</Typography>
+                        <Typography variant="body2">Mana Zone: {generatedEvent.manaZone}</Typography>
+                      </>
+                    )}
                     <Typography variant="body2">Party Goal: {generatedEvent.goal}</Typography>
                     <Typography variant="body2">Difficulty: {generatedEvent.difficulty}</Typography>
                     {generatedEvent.note && (
@@ -2149,10 +2301,10 @@ export default function Menu() {
             </Paper>
 
             <Button variant="contained" onClick={generateNpc}>Generate NPC</Button>
-            <Button variant="outlined" onClick={generateQuest}>Generate Quest</Button>
+            <Button variant="outlined" onClick={generateRumor}>Generate Rumor</Button>
           </Stack>
 
-          {npcPanelMode === 'npc' && generatedNpc && (
+          {generatedNpc && (
             <Paper
               sx={{
                 p: 2,
@@ -2182,7 +2334,128 @@ export default function Menu() {
             </Paper>
           )}
 
-          {npcPanelMode === 'quest' && generatedQuest && (
+          {generatedRumor && (
+            <Paper
+              sx={{
+                p: 2,
+                flex: '1 1 66%',
+                minWidth: 0,
+                minHeight: 160,
+                width: '100%',
+              }}
+              variant="outlined"
+            >
+              <Stack spacing={0.75} sx={{ textAlign: 'left' }}>
+                <Typography variant="h6">Rumor</Typography>
+                <Typography variant="body2">{generatedRumor}</Typography>
+              </Stack>
+            </Paper>
+          )}
+        </Box>
+      </TabPanel>
+
+      <TabPanel value={value} index={11}>
+        <Box sx={{ display: 'flex', gap: 2, width: '100%', minWidth: 0, maxWidth: '100%' }}>
+          <Stack
+            spacing={2}
+            sx={{
+              flex: '0 0 34%',
+              minWidth: 300,
+              maxWidth: 520,
+              textAlign: 'left',
+            }}
+          >
+            <Typography variant="h6" sx={GENERATOR_TITLE_SX}>Quest Generator</Typography>
+            <Typography variant="body2">
+              Select party and optional filters to generate a quest with reward output.
+            </Typography>
+
+            <Paper sx={{ p: 2 }} variant="outlined">
+              <Stack spacing={2}>
+                <FormControl fullWidth>
+                  <InputLabel id="quest-party-select-label">Party</InputLabel>
+                  <Select
+                    labelId="quest-party-select-label"
+                    value={questPartyName}
+                    label="Party"
+                    onChange={(event) => setQuestPartyName(event.target.value)}
+                  >
+                    {parties.map((entry) => (
+                      <MuiMenuItem key={`quest-party-${entry.name}`} value={entry.name}>
+                        {entry.name} (Level {entry.level})
+                      </MuiMenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel id="quest-type-select-label">Quest Type (Optional)</InputLabel>
+                  <Select
+                    labelId="quest-type-select-label"
+                    value={questType}
+                    label="Quest Type (Optional)"
+                    onChange={(event) => setQuestType(event.target.value)}
+                  >
+                    {QuestGenerator.QUEST_TYPE_OPTIONS.map((entry) => (
+                      <MuiMenuItem key={entry.value || 'auto-quest-type'} value={entry.value}>
+                        {entry.label}
+                      </MuiMenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel id="quest-habitat-select-label">Habitat (Optional)</InputLabel>
+                  <Select
+                    labelId="quest-habitat-select-label"
+                    value={questHabitat}
+                    label="Habitat (Optional)"
+                    onChange={(event) => setQuestHabitat(event.target.value)}
+                  >
+                    {NpcGenerator.HABITAT_OPTIONS.map((entry) => (
+                      <MuiMenuItem key={entry.value || 'any-quest-habitat'} value={entry.value}>
+                        {entry.label}
+                      </MuiMenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel id="quest-difficulty-select-label">Difficulty (Optional)</InputLabel>
+                  <Select
+                    labelId="quest-difficulty-select-label"
+                    value={questDifficulty}
+                    label="Difficulty (Optional)"
+                    onChange={(event) => setQuestDifficulty(event.target.value)}
+                  >
+                    <MuiMenuItem value="">Auto</MuiMenuItem>
+                    <MuiMenuItem value="easy">Easy</MuiMenuItem>
+                    <MuiMenuItem value="standard">Standard</MuiMenuItem>
+                    <MuiMenuItem value="deadly">Deadly</MuiMenuItem>
+                    <MuiMenuItem value="epic">Epic</MuiMenuItem>
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel id="quest-reward-select-label">Reward (Optional)</InputLabel>
+                  <Select
+                    labelId="quest-reward-select-label"
+                    value={questRewardType}
+                    label="Reward (Optional)"
+                    onChange={(event) => setQuestRewardType(event.target.value)}
+                  >
+                    <MuiMenuItem value="">Default</MuiMenuItem>
+                    <MuiMenuItem value="item">Item</MuiMenuItem>
+                    <MuiMenuItem value="gold">Gold</MuiMenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+            </Paper>
+
+            <Button variant="contained" onClick={generateQuest}>Generate Quest</Button>
+          </Stack>
+
+          {generatedQuest && (
             <Paper
               sx={{
                 p: 2,
@@ -2195,10 +2468,30 @@ export default function Menu() {
             >
               <Stack spacing={0.75} sx={{ textAlign: 'left' }}>
                 <Typography variant="h6">Quest Details</Typography>
+                <Typography variant="body2">
+                  Party: {generatedQuest.selectedPartyName} (Level {generatedQuest.selectedPartyLevel})
+                </Typography>
+                <Typography variant="body2">Habitat: {generatedQuest.habitat}</Typography>
                 <Typography variant="body2">Type: {generatedQuest.type}</Typography>
                 <Typography variant="body2">Details: {generatedQuest.details}</Typography>
                 <Typography variant="body2">Difficulty: {generatedQuest.difficulty}</Typography>
                 <Typography variant="body2">Reward: {generatedQuest.reward}</Typography>
+                {generatedQuest.rewardItem && (
+                  <Paper sx={{ p: 1.25, mt: 0.5 }} variant="outlined">
+                    <Typography variant="subtitle2">{generatedQuest.rewardItem.item}</Typography>
+                    <Typography variant="body2">Details: {generatedQuest.rewardItem.details || 'No details provided.'}</Typography>
+                    {generatedQuest.rewardItem.effects && (
+                      <Typography variant="body2">Effects: {generatedQuest.rewardItem.effects}</Typography>
+                    )}
+                    {generatedQuest.rewardItem.damage && (
+                      <Typography variant="body2">Damage: {generatedQuest.rewardItem.damage}</Typography>
+                    )}
+                    <Typography variant="body2">Cost: {generatedQuest.rewardItem.cost}</Typography>
+                    <Typography variant="body2">Rarity: {generatedQuest.rewardItem.rarity}</Typography>
+                    <Typography variant="body2">Type: {generatedQuest.rewardItem.type}</Typography>
+                    <Typography variant="body2">Size: {generatedQuest.rewardItem.size || 'unknown'}</Typography>
+                  </Paper>
+                )}
               </Stack>
             </Paper>
           )}

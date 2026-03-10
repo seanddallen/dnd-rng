@@ -9,7 +9,20 @@ class EventGenerator {
     { value: 'flux', label: 'Flux' },
   ];
 
-  static HABITAT_OPTIONS = EVENT_HABITAT_OPTIONS;
+  static HABITAT_ONLY_OPTIONS = EVENT_HABITAT_OPTIONS.filter((option) => option.value !== 'urban');
+  static HABITAT_OPTIONS = [{ value: '', label: 'Any Habitat' }, ...EVENT_HABITAT_OPTIONS.filter((option) => option.value !== 'urban')];
+  static CITY_OPTIONS = [
+    { value: '', label: 'Any City Area' },
+    { value: 'tavern', label: 'Tavern' },
+    { value: 'marketDistrict', label: 'Market District' },
+    { value: 'castleDistrict', label: 'Castle District' },
+    { value: 'universityDistrict', label: 'University District' },
+    { value: 'templeDistrict', label: 'Temple District' },
+    { value: 'highDistrict', label: 'High District' },
+    { value: 'lowDistrict', label: 'Low District' },
+    { value: 'slums', label: 'Slums' },
+    { value: 'tomb', label: 'Tomb' },
+  ];
 
   static DIFFICULTY_OPTIONS = ['minor', 'severe', 'catastrophic'];
 
@@ -59,12 +72,40 @@ class EventGenerator {
     return list[Math.floor(Math.random() * list.length)];
   }
 
-  static generateEvent({ habitat, manaZone, difficulty }) {
-    const pool = events.habitats?.[habitat] || [];
+  static generateEvent({ habitat, city, manaZone, difficulty }) {
+    const useCity = Boolean(city);
+    const resolvedHabitat = useCity
+      ? null
+      : (habitat || this.getRandomFromList(this.HABITAT_ONLY_OPTIONS.map((option) => option.value)));
+    const pool = useCity
+      ? (events.city?.[city] || [])
+      : (events.habitats?.[resolvedHabitat] || []);
 
     if (pool.length === 0) {
       return {
-        error: 'No events configured for that habitat and mana zone.',
+        error: useCity
+          ? 'No events configured for that city area.'
+          : 'No events configured for that habitat and mana zone.',
+      };
+    }
+
+    if (useCity) {
+      let candidates = difficulty ? pool.filter((entry) => entry.difficulty === difficulty) : [...pool];
+      let note = null;
+      if (difficulty && candidates.length === 0) {
+        candidates = [...pool];
+        note = 'No city events matched that difficulty exactly; used available city events.';
+      }
+
+      const selected = this.getRandomFromList(candidates);
+      return {
+        event: selected.event,
+        goal: selected.goal,
+        difficulty: selected.difficulty,
+        city,
+        habitat: null,
+        manaZone: null,
+        note,
       };
     }
 
@@ -103,11 +144,13 @@ class EventGenerator {
       event: selected.event,
       goal: selected.goal,
       difficulty: selected.difficulty,
-      habitat,
-      manaZone,
+      habitat: resolvedHabitat,
+      city: null,
+      manaZone: zone,
       note,
     };
   }
 }
 
 export default EventGenerator;
+
